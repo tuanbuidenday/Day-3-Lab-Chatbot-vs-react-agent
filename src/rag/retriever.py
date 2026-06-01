@@ -45,11 +45,15 @@ class RetrievedDocument:
     zone: Optional[str]
     score: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, max_content_chars: int = 800) -> Dict[str, Any]:
+        content = self.content.strip()
+        if len(content) > max_content_chars:
+            content = f"{content[:max_content_chars].rstrip()}..."
+
         return {
             "id": self.id,
             "title": self.title,
-            "content": self.content.strip(),
+            "content": content,
             "category": self.category,
             "location": self.location,
             "zone": self.zone,

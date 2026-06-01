@@ -10,7 +10,7 @@ def create_provider():
     load_dotenv()
 
     provider = os.getenv("DEFAULT_PROVIDER", "ollama").lower()
-    model = os.getenv("DEFAULT_MODEL", "llama3")
+    model = os.getenv("DEFAULT_MODEL", "qwen2.5:3b")
 
     if provider == "ollama":
         from src.core.ollama_provider import OllamaProvider
