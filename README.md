@@ -15,7 +15,57 @@ cp .env.example .env
 pip install -r requirements.txt
 ```
 
-### 3. Directory Structure
+By default the demo backend can use Ollama on your machine:
+```env
+DEFAULT_PROVIDER=ollama
+DEFAULT_MODEL=llama3
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+Make sure Ollama is running and the model exists locally:
+```bash
+ollama pull llama3
+ollama serve
+```
+
+### 3. Run the VinWonders Backend API
+Start the REST API:
+```bash
+python3 -m uvicorn src.api:app --reload --host 127.0.0.1 --port 8000
+```
+
+Open API docs:
+```text
+http://127.0.0.1:8000/docs
+```
+
+Search the local VinWonders knowledge base:
+```bash
+curl "http://127.0.0.1:8000/knowledge/search?q=lich%20trinh%20phu%20quoc&limit=3"
+```
+
+Ask the RAG chatbot:
+```bash
+curl -X POST "http://127.0.0.1:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Gợi ý lịch trình 1 ngày ở VinWonders Phú Quốc","location":"Phú Quốc"}'
+```
+
+The API uses local documents from `src/vinwonders_knowledge.py`, retrieves the most relevant context,
+then asks the configured self-hosted model through Ollama.
+
+### 4. Run the CLI Chatbot Baseline
+Interactive mode:
+```bash
+python3 -m src.chatbot
+```
+
+One-shot mode:
+```bash
+python3 -m src.chatbot --message "Gợi ý trò chơi nước ở Phú Quốc"
+```
+
+### 5. Directory Structure
 - `src/tools/`: Extension point for your custom tools.
 
 ## 🏠 Running with Local Models (CPU)
