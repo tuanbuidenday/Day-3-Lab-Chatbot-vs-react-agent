@@ -51,6 +51,15 @@ curl -X POST "http://127.0.0.1:8000/chat" \
   -d '{"message":"Gợi ý lịch trình 1 ngày ở VinWonders Phú Quốc","location":"Phú Quốc"}'
 ```
 
+Ask the ReAct Agent v2 with tools:
+```bash
+curl -X POST "http://127.0.0.1:8000/agent/react" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Kiểm tra an toàn và gợi ý lịch trình cho gia đình ở Phú Quốc"}'
+```
+
+The ReAct Agent is bounded for demo safety: maximum 3 reasoning loops and 40 seconds total runtime.
+
 The API uses local documents from `src/vinwonders_knowledge.py`, retrieves the most relevant context,
 then asks the configured self-hosted model through Ollama.
 

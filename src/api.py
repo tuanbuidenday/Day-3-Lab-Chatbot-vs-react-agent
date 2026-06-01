@@ -11,10 +11,12 @@ from pydantic import BaseModel, Field, field_validator
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.provider_factory import create_provider
+from src.agent.improved_agent import ImprovedReActAgent
 from src.rag.retriever import RetrievedDocument, VinWondersRetriever
 from src.security.guardrails import ChatGuardrails
 from src.telemetry.logger import logger
 from src.telemetry.metrics import tracker
+from src.tools.vinwonders_tools import VinWondersTools
 
 load_dotenv()
 
@@ -26,6 +28,8 @@ RATE_LIMIT_RPM = int(os.getenv("RATE_LIMIT_RPM", "20"))        # requests/phút 
 SESSION_TTL_S  = int(os.getenv("SESSION_TTL_S",  "3600"))      # 1 giờ
 MAX_MESSAGE_LEN = int(os.getenv("MAX_MESSAGE_LEN", "1000"))    # ký tự tối đa
 MAX_SESSIONS   = int(os.getenv("MAX_SESSIONS", "5000"))        # giới hạn bộ nhớ
+AGENT_MAX_STEPS = int(os.getenv("AGENT_MAX_STEPS", "3"))       # vòng lặp tối đa
+AGENT_TIMEOUT_S = int(os.getenv("AGENT_TIMEOUT_S", "40"))      # timeout tổng
 
 app = FastAPI(
     title="VinWonders Chatbot API",
@@ -157,6 +161,25 @@ class SearchResponse(BaseModel):
     query: str
     results: List[dict]
 
+
+class AgentRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_LEN)
+    max_steps: int = Field(default=AGENT_MAX_STEPS, ge=1, le=AGENT_MAX_STEPS)
+
+    @field_validator("message")
+    @classmethod
+    def sanitize_message(cls, v: str) -> str:
+        cleaned = "".join(ch for ch in v if ch == "\n" or ch == "\t" or (ord(ch) >= 32 and ord(ch) != 127))
+        if not cleaned.strip():
+            raise ValueError("Message chứa nội dung không hợp lệ.")
+        return cleaned.strip()
+
+
+class AgentResponse(BaseModel):
+    answer: str
+    agent_version: str
+    tools_available: List[str]
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -281,6 +304,23 @@ def chat(request: ChatRequest):
         model=provider.model_name,
         latency_ms=result["latency_ms"],
         usage=result["usage"],
+    )
+
+
+@app.post("/agent/react", response_model=AgentResponse, dependencies=[Depends(rate_limit)])
+def react_agent(request: AgentRequest):
+    tools = VinWondersTools().definitions()
+    agent = ImprovedReActAgent(
+        llm=create_provider(),
+        tools=tools,
+        max_steps=request.max_steps,
+        timeout_seconds=AGENT_TIMEOUT_S,
+    )
+    answer = agent.run(request.message)
+    return AgentResponse(
+        answer=answer,
+        agent_version="v2-guarded-react",
+        tools_available=[tool["name"] for tool in tools],
     )
 
 
