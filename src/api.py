@@ -5,6 +5,8 @@ from uuid import uuid4
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from src.core.provider_factory import create_provider
 from src.rag.retriever import RetrievedDocument, VinWondersRetriever
@@ -19,6 +21,14 @@ app = FastAPI(
     description="Local demo backend for a VinWonders virtual travel guide chatbot.",
     version="1.0.0",
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 retriever = VinWondersRetriever()
 conversation_store: Dict[str, List[Dict[str, str]]] = {}
